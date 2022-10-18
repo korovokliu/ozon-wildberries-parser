@@ -59,18 +59,12 @@ class ParserWildberries(Parser):
         self.site = "wildberries"
 
     def _parse_data(self, source, timing=2):
-        soup = BeautifulSoup(source, "lxml")
-        for i in soup.find_all("span", class_="feedback__date hide-mobile"):
-            extracted_time = i.get('content')
-           # TODO: add if extracted_time == milliseconds
-
-        date = [datetime.strptime(i.get('content'), '%Y-%m-%dT%H:%M:%SZ') + timedelta(hours=3) for i in
-                       soup.find_all("span", class_="feedback__date hide-mobile")]
+        soup = BeautifulSoup(source, "lxml")     
+        date = [datetime.strptime(re.match(r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})', i.get('content')).group(1), '%Y-%m-%dT%H:%M:%S') + timedelta(hours=3) for i in soup.find_all("span", class_="feedback__date hide-mobile")]    
         stars = [int(i.get('class')[2][-1]) for i in soup.find_all("span", itemprop="reviewRating")]
         reviews = [(i.find_all("p", class_="feedback__text")[-1]).text for i in
                    soup.find_all("li", class_="comments__item feedback j-feedback-slide")]
-        likes = [i.text[2] for i in soup.find_all("div", class_="vote__wrap")]
-        dislikes = [i.text[5] for i in soup.find_all("div", class_="vote__wrap")]
+        likes, dislikes = zip(*[(i.text[2], i.text[5]) for i in soup.find_all("div", class_="vote__wrap")])
 
         for review in zip(date, stars, likes, dislikes, reviews):
             self.all_reviews.append({key: value for key, value in zip(self.fieldnames, review)})
